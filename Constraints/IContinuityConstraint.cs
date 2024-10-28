@@ -8,5 +8,8 @@ namespace GK1_PolygonEditor
 {
     internal interface IContinuityConstraint
     {
+        VertexContinuity ContinuityType { get; }
+
+        string? Text { get; }
     }
 }

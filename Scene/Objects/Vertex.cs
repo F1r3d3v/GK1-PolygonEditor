@@ -7,6 +7,10 @@ namespace GK1_PolygonEditor
         public float X { get; set; }
         public float Y { get; set; }
 
+        public bool IsControlPoint { get; set; }
+
+        public Shape? Parent { get; set; }
+
         public float Radius { get; set; }
 
         public Segment? FirstSegment { get; set; }
@@ -14,17 +18,22 @@ namespace GK1_PolygonEditor
 
         public IContinuityConstraint? ContinuityConstraint { get; set; }
 
-        public Vertex(float x, float y, float radius = 5)
+        public Vertex(float x, float y, float radius = 5, bool isControlPoint = false)
         {
             X = x;
             Y = y;
             Radius = radius;
+            IsControlPoint = isControlPoint;
         }
 
         public static implicit operator Vertex(Point p) => new Vertex(p.X, p.Y);
-        public static implicit operator Vertex(PointF p) => new Vertex(p.X, p.Y);
         public static implicit operator Point(Vertex v) => new Point((int)v.X, (int)v.Y);
+
+        public static implicit operator Vertex(PointF p) => new Vertex(p.X, p.Y);
         public static implicit operator PointF(Vertex v) => new PointF(v.X, v.Y);
+
+        public static implicit operator Vertex(Vector2 p) => new Vertex(p.X, p.Y);
+        public static implicit operator Vector2(Vertex v) => new Vector2(v.X, v.Y);
 
         public static Vertex operator +(Vertex a, Vertex b)
             => new Vertex(a.X + b.X, a.Y + b.Y);
@@ -34,20 +43,29 @@ namespace GK1_PolygonEditor
              => new Vertex(a * b.X, a * b.Y);
         public static Vertex operator *(double a, Vertex b)
              => new Vertex((float)a * b.X, (float)a * b.Y);
+        public static Vertex operator /(Vertex a, double b)
+             => new Vertex(a.X / (float)b, a.Y / (float)b);
 
-        public void Move(PointF p, bool checkConstraints = true)
+        public void MoveAbs(PointF p, bool checkConstraints = true, bool checkContinuity = true)
         {
             Vector2 delta = new Vector2(p.X - X, p.Y - Y);
-            Move(delta, checkConstraints);
+            Move(delta, checkConstraints, checkContinuity);
         }
 
-        public void Move(Vector2 delta, bool checkConstraints = true)
+        public void Move(Vector2 delta, bool checkConstraints = true, bool checkContinuity = true)
         {
             X += delta.X;
             Y += delta.Y;
 
-            if (checkConstraints)
-                PreserveConstraints(this, delta);
+            if (IsControlPoint && checkContinuity)
+            {
+                Parent?.MoveControlPoint(this, delta);
+            }
+            else if(checkConstraints)
+            {
+                Shape.PreserveConstraints(this, delta);
+                Parent?.PreserveContinuity(this, delta);
+            }
         }
 
         public float DistanceToSquared(Vertex other)
@@ -60,74 +78,49 @@ namespace GK1_PolygonEditor
             return (float)Math.Sqrt(Math.Pow(X - other.X, 2) + Math.Pow(Y - other.Y, 2));
         }
 
-        private static void PreserveConstraints(Vertex v, Vector2 delta)
+        public bool CouldAddContinuityConstrain() => FirstSegment is BezierCurve || SecondSegment is BezierCurve;
+
+        public void Delete()
         {
-            Vector2 lastDelta = delta;
-            Segment e = v.FirstSegment!;
-            bool allVerticesMoevd = false;
-
-            while (true)
+            if (Parent!.Vertices.Count <= 3)
             {
-                if (e.Start == v)
-                {
-                    allVerticesMoevd = true;
-                    break;
-                }
-
-                if (e.Constraint == null || e.Constraint.IsPreserved())
-                    break;
-
-                Vector2 temp = new Vector2();
-                if (e.Constraint.ConstraintType == ConstraintType.Horizontal)
-                {
-                    temp = new Vector2(0, e.End.Y - e.Start.Y);
-                    lastDelta = temp;
-                }
-                else if (e.Constraint.ConstraintType == ConstraintType.Vertical)
-                {
-                    temp = new Vector2(e.End.X - e.Start.X, 0);
-                    lastDelta = temp;
-                }
-                else if (e.Constraint.ConstraintType == ConstraintType.FixedLength)
-                    temp = new Vector2(lastDelta.X, lastDelta.Y);
-
-                e.Start.Move(temp, false);
-                e = e.Start.FirstSegment!;
+                Parent.Scene!.DeleteShape(Parent);
+                Parent = null;
+                return;
             }
+            Segment s1 = FirstSegment!;
+            Segment s2 = SecondSegment!;
+            Edge e = new Edge(s1.Start, s2.End, Parent);
+            int edge_idx = Parent.Segments.IndexOf(s1);
+            Parent.Segments.Insert(edge_idx, e);
 
-            if (!allVerticesMoevd)
-                lastDelta = delta;
-            else if (lastDelta.X == 0)
-                lastDelta = new Vector2(delta.X, 0);
-            else if (lastDelta.Y == 0)
-                lastDelta = new Vector2(0, delta.Y);
+            if (!s1.Start.CouldAddContinuityConstrain())
+                s1.Start.ContinuityConstraint = null;
 
-            e = v.SecondSegment!;
-            while (true)
-            {
-                if (e.End == v)
-                    break;
+            if (!s2.End.CouldAddContinuityConstrain())
+                s2.End.ContinuityConstraint = null;
 
-                if (e.Constraint == null || e.Constraint.IsPreserved())
-                    break;
+            Parent.Segments.Remove(s1);
+            Parent.Segments.Remove(s2);
+            Parent.Vertices.Remove(this);
+            Parent.PreserveContinuity();
+        }
 
-                Vector2 temp = new Vector2();
-                if (e.Constraint.ConstraintType == ConstraintType.Horizontal)
-                {
-                    temp = new Vector2(0, e.Start.Y - e.End.Y);
-                    lastDelta = temp;
-                }
-                else if (e.Constraint.ConstraintType == ConstraintType.Vertical)
-                {
-                    temp = new Vector2(e.Start.X - e.End.X, 0);
-                    lastDelta = temp;
-                }
-                else if (e.Constraint.ConstraintType == ConstraintType.FixedLength)
-                    temp = new Vector2(lastDelta.X, lastDelta.Y);
+        public void SetG0Continuity()
+        {
+            ContinuityConstraint = new ContinuityG0Constraint();
+            Parent?.PreserveContinuity();
+        }
 
-                e.End.Move(temp, false);
-                e = e.End.SecondSegment!;
-            };
+        public void SetG1Continuity()
+        {
+            ContinuityConstraint = new ContinuityG1Constraint();
+            Parent?.PreserveContinuity();
+        }
+        public void SetC1Continuity()
+        {
+            ContinuityConstraint = new ContinuityC1Constraint();
+            Parent?.PreserveContinuity();
         }
 
         public void Accept(IVisitor visitor) => visitor.Visit(this);

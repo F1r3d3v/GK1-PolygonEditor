@@ -53,8 +53,8 @@ namespace GK1_PolygonEditor
             _camera = camera;
             _canvas = canvas;
             _bitmap = bitmap;
-            _canvas.Paint += OnPaint;
-            _canvas.Resize += OnResize;
+            _canvas.Paint += OnPaint!;
+            _canvas.Resize += OnResize!;
             _currentStrategy = new DefaultRenderer(_bitmap.Bitmap, _camera);
         }
 

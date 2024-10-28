@@ -8,5 +8,8 @@ namespace GK1_PolygonEditor
 {
     internal class ContinuityG0Constraint : IContinuityConstraint
     {
+        public VertexContinuity ContinuityType => VertexContinuity.G0Continuity;
+
+        public string? Text => "G⁰";
     }
 }

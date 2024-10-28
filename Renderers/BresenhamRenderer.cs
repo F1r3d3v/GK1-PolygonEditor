@@ -19,7 +19,25 @@ namespace GK1_PolygonEditor
         {
             Point vert = Camera.WorldToScreen(vertex);
             using (Graphics graphics = Graphics.FromImage(_bitmap.Bitmap))
+            {
                 graphics.FillEllipse(Brushes.Black, vert.X - vertex.Radius, vert.Y - vertex.Radius, 2 * vertex.Radius, 2 * vertex.Radius);
+                if (vertex.ContinuityConstraint != null)
+                {
+                    if (vertex.ContinuityConstraint.Text != null && vertex.ContinuityConstraint.Text != "")
+                    {
+                        using (var brush = new SolidBrush(Color.Black))
+                        {
+                            using (var font = new Font("Calibri", 10))
+                            {
+                                var textSize = TextRenderer.MeasureText(vertex.ContinuityConstraint.Text, font);
+                                PointF p = new PointF(vert.X + vertex.Radius + 5, vert.Y - vertex.Radius - 5);
+                                graphics.FillRectangle(brush, p.X, p.Y - textSize.Height / 2, textSize.Width, textSize.Height);
+                                graphics.DrawString(vertex.ContinuityConstraint.Text, new Font("Calibri", 10), Brushes.White, new Rectangle((int)(p.X), (int)(p.Y - textSize.Height / 2), textSize.Width, textSize.Height));
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         public void Visit(Edge edge)
@@ -68,7 +86,7 @@ namespace GK1_PolygonEditor
                 _bitmap.End();
             }
             Pen pen = new Pen(Brushes.Black, 2);
-            pen.DashPattern = [5.0f, 3.0f];
+            pen.DashPattern = [5.0f, 5.0f];
             Point start = Camera.WorldToScreen(bezierCurve.Start);
             Point end = Camera.WorldToScreen(bezierCurve.End);
             Point cp1 = Camera.WorldToScreen(bezierCurve.ControlPoint1);

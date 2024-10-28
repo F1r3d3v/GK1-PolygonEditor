@@ -24,7 +24,7 @@ namespace GK1_PolygonEditor
 
         public void End()
         {
-            _bitmap.UnlockBits(_bmpData);
+            _bitmap.UnlockBits(_bmpData!);
         }
 
         public void Resize(int width, int height)

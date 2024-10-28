@@ -11,6 +11,11 @@ namespace GK1_PolygonEditor
         Horizontal,
         Vertical,
         FixedLength,
+        BezierContinuity
+    }
+
+    internal enum VertexContinuity
+    {
         G0Continuity,
         G1Continuity,
         C1Continuity

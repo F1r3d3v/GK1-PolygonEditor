@@ -7,7 +7,14 @@
 
         public void AddShape(Shape shape)
         {
+            shape.Scene = this;
             Shapes.Add(shape);
+        }
+
+        public void DeleteShape(Shape shape)
+        {
+            shape.Scene = null;
+            Shapes.Remove(shape);
         }
 
         public void Render(IRenderer renderer)

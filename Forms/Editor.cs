@@ -12,7 +12,6 @@ namespace GK1_PolygonEditor
         private ContextMenuVisitor _contextMenuVisitor;
 
         private Vertex? _selectedVertex = null;
-        private Vertex? _selectedControlPoint = null;
         private Shape? _selectedShape = null;
         private Shape? _newShape = null;
 
@@ -20,8 +19,6 @@ namespace GK1_PolygonEditor
         private bool _isDraggingShape = false;
         private bool _isDraggingViewport = false;
         private bool _isCreatingShape = false;
-
-        private Shape _shapeToDelete;
 
         private Point _previousMousePosition;
 
@@ -33,46 +30,34 @@ namespace GK1_PolygonEditor
             _unsafeBitmap = new UnsafeBitmap(c_Canvas.Width, c_Canvas.Height);
             _camera = new Camera(_unsafeBitmap.Width, _unsafeBitmap.Height);
             _renderer = new Renderer(_scene, c_Canvas, _unsafeBitmap, _camera);
-            _contextMenuVisitor = new ContextMenuVisitor(_scene, _renderer);
+            _contextMenuVisitor = new ContextMenuVisitor(_renderer);
 
             Utils.AddRadioCheckedBinding(rb_Library, _renderer, "RendererEnum", RendererEnum.Library);
             Utils.AddRadioCheckedBinding(rb_Bresenham, _renderer, "RendererEnum", RendererEnum.Bresenham);
 
-            var verts1 = new Vertex[]
+            var verts = new Vertex[]
             {
-                new Vertex(0, -50),
-                new Vertex(100, 75),
-                new Vertex(25, 125),
-                new Vertex(50, 50),
+                new Vertex(160, -115),
+                new Vertex(160, 50),
+                new Vertex(35, 130),
+                new Vertex(-105, 85),
+                new Vertex(-85, -115),
             };
 
-            var segments1 = new Segment[]
+            var segments = new Segment[]
             {
-                new Edge(verts1[0], verts1[1]),
-                new Edge(verts1[1], verts1[2]),
-                new Edge(verts1[2], verts1[3]),
-                new BezierCurve(verts1[3], verts1[0])
+                new Edge(verts[0], verts[1]),
+                new Edge(verts[1], verts[2]),
+                new Edge(verts[2], verts[3]),
+                new Edge(verts[4], verts[0]),
+                new BezierCurve(verts[3], verts[4]),
             };
 
-            var verts2 = new Vertex[]
-            {
-                new Vertex(0, 50),
-                new Vertex(-100, -75),
-                new Vertex(-25, -125),
-                new Vertex(-50, -50),
-            };
-
-            var segments2 = new Segment[]
-            {
-                new Edge(verts2[0], verts2[1]),
-                new Edge(verts2[1], verts2[2]),
-                new Edge(verts2[2], verts2[3]),
-                new Edge(verts2[3], verts2[0])
-            };
-
-
-            _scene.AddShape(new Shape(verts1, segments1));
-            _scene.AddShape(new Shape(verts2, segments2));
+            (segments[0] as Edge)!.SetVertical();
+            (segments[1] as Edge)!.SetFixedLength(150);
+            (segments[3] as Edge)!.SetHorizontal();
+            verts[3].SetG1Continuity();
+            _scene.AddShape(new Shape(verts, segments));
             _scene.Shapes.ForEach((x) => x.IsClosed = true);
 
             _renderer.RenderScene();
@@ -86,32 +71,38 @@ namespace GK1_PolygonEditor
             {
                 if (_isCreatingShape)
                 {
+                    // Closing shape
                     Vertex first = _newShape!.Vertices.First();
                     if (_newShape!.Vertices.Count > 2 &&
                         first.DistanceToSquared(mouseWorldPosition) < first.Radius * first.Radius)
                     {
-                        _newShape.Segments.Last().End = first;
+                        first.FirstSegment = _newShape.Segments.Last();
+                        first.FirstSegment.End = first;
+                        _newShape.IsClosed = true;
 
                         _isCreatingShape = false;
-                        _newShape.IsClosed = true;
                         _renderer.RenderScene();
                     }
-                    else
+                    else // Add vertex to shape
                     {
                         var newVertex = new Vertex(mouseWorldPosition.X, mouseWorldPosition.Y);
-                        _newShape.Vertices.Add(newVertex);
-                        _newShape.Segments.Last().End = newVertex;
-                        _newShape.Segments.Add(new Edge(newVertex, newVertex));
+                        Edge edge = new Edge(newVertex, newVertex);
+                        newVertex.FirstSegment = _newShape.Segments.Last();
+                        newVertex.FirstSegment.End = newVertex;
+
+                        _newShape.AddVertex(newVertex);
+                        _newShape.AddSegment(edge);
+
                         _renderer.RenderScene();
                     }
                 }
-                else if (e.Clicks == 2)
+                else if (e.Clicks == 2) // Start creating shape
                 {
                     _isCreatingShape = true;
                     _newShape = new Shape();
                     var startVertex = new Vertex(mouseWorldPosition.X, mouseWorldPosition.Y);
-                    _newShape.Vertices.Add(startVertex);
-                    _newShape.Segments.Add(new Edge(startVertex, startVertex));
+                    _newShape.AddVertex(startVertex);
+                    _newShape.AddSegment(new Edge(startVertex, startVertex));
                     _scene.AddShape(_newShape);
                     _renderer.RenderScene();
                 }
@@ -138,7 +129,7 @@ namespace GK1_PolygonEditor
                                 {
                                     if (v.DistanceToSquared(mouseWorldPosition) < v.Radius * v.Radius)
                                     {
-                                        _selectedControlPoint = v;
+                                        _selectedVertex = v;
                                         _isDraggingVertex = true;
                                         return;
                                     }
@@ -175,7 +166,6 @@ namespace GK1_PolygonEditor
                         {
                             if (v.DistanceToSquared(mouseWorldPosition) < v.Radius * v.Radius)
                             {
-                                _contextMenuVisitor.SetCurrentShape(shape);
                                 v.Accept(_contextMenuVisitor);
                                 return;
                             }
@@ -185,7 +175,6 @@ namespace GK1_PolygonEditor
                         {
                             if (s.IsPointOnSegment(mouseWorldPosition))
                             {
-                                _contextMenuVisitor.SetCurrentShape(shape);
                                 s.Accept(_contextMenuVisitor);
                                 return;
                             }
@@ -206,6 +195,8 @@ namespace GK1_PolygonEditor
         {
             int deltaX = (e.X - _previousMousePosition.X);
             int deltaY = (e.Y - _previousMousePosition.Y);
+            var currentMousePos = _camera.ScreenToWorld(e.Location);
+            tssl_Position.Text = $"X: {currentMousePos.X:0}, Y:{currentMousePos.Y:0}";
 
             if (_isDraggingViewport)
             {
@@ -227,25 +218,15 @@ namespace GK1_PolygonEditor
                 });
                 _renderer.RenderScene();
             }
-            else if (_isDraggingVertex)
+            else if (_isDraggingVertex && _selectedVertex != null)
             {
-                if (_selectedControlPoint != null)
-                {
-                    _selectedControlPoint.X += deltaX;
-                    _selectedControlPoint.Y -= deltaY;
-                }
-                else if (_selectedVertex != null)
-                {
-                    Vector2 delta = new Vector2(deltaX, -deltaY);
-                    _selectedVertex.Move(delta);
-                }
+                Vector2 delta = new Vector2(deltaX, -deltaY);
+                _selectedVertex.Move(delta);
 
                 _renderer.RenderScene();
             }
             else if (_isCreatingShape)
             {
-                var currentMousePos = _camera.ScreenToWorld(e.Location);
-
                 _newShape!.Segments.Last().End = currentMousePos;
                 _renderer.RenderScene();
             }
@@ -259,7 +240,6 @@ namespace GK1_PolygonEditor
             {
                 _isDraggingVertex = false;
                 _selectedVertex = null;
-                _selectedControlPoint = null;
 
                 _isDraggingShape = false;
                 _selectedShape = null;
@@ -269,6 +249,23 @@ namespace GK1_PolygonEditor
             {
                 _isDraggingViewport = false;
             }
+        }
+
+        private void exitToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            Application.Exit();
+        }
+
+        private void manualToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            var form = new ManualForm();
+            form.ShowDialog();
+        }
+
+        private void relationsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            var form = new RelationsForm();
+            form.ShowDialog();
         }
     }
 }

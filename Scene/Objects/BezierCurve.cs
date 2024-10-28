@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Drawing;
 using System.Windows.Forms;
 
 namespace GK1_PolygonEditor
@@ -11,20 +12,51 @@ namespace GK1_PolygonEditor
         private List<Vertex> _vertices = [];
         private double _step;
 
-        public BezierCurve(Vertex start, Vertex end) : base(start, end)
+        public BezierCurve(Vertex start, Vertex end, Shape? parent = null) : base(start, end, parent)
         {
             Edge temp = new Edge(start, end);
+            Start.SecondSegment = this;
+            End.FirstSegment = this;
+
             float length = temp.Length() / 4;
             ControlPoint1 = temp.OverEdgePoint(length);
+            ControlPoint1.IsControlPoint = true;
+            ControlPoint1.FirstSegment = Start.FirstSegment;
+            ControlPoint1.Parent = Parent;
             ControlPoint2 = temp.OverEdgePoint(-length);
+            ControlPoint2.IsControlPoint = true;
+            ControlPoint2.SecondSegment = End.SecondSegment;
+            ControlPoint2.Parent = Parent;
             ComputePoints();
+
+            if (start.ContinuityConstraint == null)
+                start.ContinuityConstraint = new ContinuityC1Constraint();
+
+            if (end.ContinuityConstraint == null)
+                end.ContinuityConstraint = new ContinuityC1Constraint();
         }
 
-        public BezierCurve(Vertex start, Vertex controlPoint1, Vertex controlPoint2, Vertex end) : base(start, end)
+        public override void SetParent(Shape? parent)
         {
-            ControlPoint1 = controlPoint1;
-            ControlPoint2 = controlPoint2;
-            ComputePoints();
+            base.SetParent(parent);
+            ControlPoint1.Parent = Parent;
+            ControlPoint2.Parent = Parent;
+        }
+
+        public void ChangeToEdge()
+        {
+            Edge e = new Edge(Start, End, Parent);
+            int bc_idx = Parent!.Segments.IndexOf(this);
+            Parent.Segments[bc_idx] = e;
+            if (e.Start.FirstSegment is Edge)
+                e.Start.ContinuityConstraint = null;
+            else if (e.Start.FirstSegment is BezierCurve b1)
+                b1.ControlPoint2.SecondSegment = e;
+
+            if (e.End.SecondSegment is Edge)
+                e.End.ContinuityConstraint = null;
+            else if (e.End.SecondSegment is BezierCurve b2)
+                b2.ControlPoint1.FirstSegment = e;
         }
 
         public List<Vertex> ComputePoints()
@@ -37,10 +69,12 @@ namespace GK1_PolygonEditor
             Vertex A2 = 3 * (ControlPoint2 - 2 * ControlPoint1 + Start);
             Vertex A3 = End - 3 * ControlPoint2 + 3 * ControlPoint1 - Start;
 
+            double _step2 = _step * _step;
+            double _step3 = _step2 * _step;
             Vertex P = A0;
-            Vertex d1P = Math.Pow(_step, 3) * A3 + Math.Pow(_step, 2) * A2 + _step * A1;
-            Vertex d2P = 6 * Math.Pow(_step, 3) * A3 + 2 * Math.Pow(_step, 2) * A2;
-            Vertex d3P = 6 * Math.Pow(_step, 3) * A3;
+            Vertex d1P = _step3 * A3 + _step2 * A2 + _step * A1;
+            Vertex d2P = 6 * _step3 * A3 + 2 * _step2 * A2;
+            Vertex d3P = 6 * _step3 * A3;
 
             _vertices.Add(Start);
             for (int i = 1; i < points - 1; i++)
