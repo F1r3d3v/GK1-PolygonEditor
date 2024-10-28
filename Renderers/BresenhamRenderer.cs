@@ -220,17 +220,14 @@ namespace GK1_PolygonEditor
             float slope = (dx == 0) ? 1 : dy / dx;
 
             float y = y1;
-            if (steep)
+            for (int i = x1; i < x2; i++, y += slope)
             {
-                for (int i = x1; i < x2; i++, y += slope)
+                if (steep)
                 {
                     DrawPixelWithIntensity((int)y, i, color, (1 - frac(y)));
                     DrawPixelWithIntensity((int)(y + 1), i, color, frac(y));
                 }
-            }
-            else
-            {
-                for (int i = x1; i < x2; i++, y += slope)
+                else
                 {
                     DrawPixelWithIntensity(i, (int)y, color, (1 - frac(y)));
                     DrawPixelWithIntensity(i, (int)(y + 1), color, frac(y));
