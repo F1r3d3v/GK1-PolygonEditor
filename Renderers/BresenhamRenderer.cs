@@ -45,7 +45,10 @@ namespace GK1_PolygonEditor
             Point start = Camera.WorldToScreen(edge.Start);
             Point end = Camera.WorldToScreen(edge.End);
             _bitmap.Begin();
-            BresenhamLine(start.X, start.Y, end.X, end.Y, Color.Black);
+            if (edge.IsAntialiased)
+                WuLine(start.X, start.Y, end.X, end.Y, Color.Black);
+            else
+                BresenhamLine(start.X, start.Y, end.X, end.Y, Color.Black);
             _bitmap.End();
             PointF p = Camera.WorldToScreen(edge.OverEdgePoint(24));
             if (edge.Constraint != null)
@@ -82,7 +85,10 @@ namespace GK1_PolygonEditor
                 Point a = Camera.WorldToScreen(vertices[i]);
                 Point b = Camera.WorldToScreen(vertices[i + 1]);
                 _bitmap.Begin();
-                BresenhamLine(a.X, a.Y, b.X, b.Y, Color.Black);
+                if (bezierCurve.IsAntialiased)
+                    WuLine(a.X, a.Y, b.X, b.Y, Color.Black);
+                else
+                    BresenhamLine(a.X, a.Y, b.X, b.Y, Color.Black);
                 _bitmap.End();
             }
             Pen pen = new Pen(Brushes.Black, 2);
@@ -94,9 +100,9 @@ namespace GK1_PolygonEditor
             using (Graphics graphics = Graphics.FromImage(_bitmap.Bitmap))
             {
                 graphics.DrawLine(pen, start.X, start.Y, cp1.X, cp1.Y);
-                //Graphics.DrawLine(pen, cp1.X, cp1.Y, cp2.X, cp2.Y);
+                graphics.DrawLine(pen, cp1.X, cp1.Y, cp2.X, cp2.Y);
                 graphics.DrawLine(pen, cp2.X, cp2.Y, end.X, end.Y);
-                //Graphics.DrawLine(pen, end.X, end.Y, start.X, start.Y);
+                graphics.DrawLine(pen, end.X, end.Y, start.X, start.Y);
             }
             Visit(bezierCurve.ControlPoint1);
             Visit(bezierCurve.ControlPoint2);
@@ -189,6 +195,61 @@ namespace GK1_PolygonEditor
                 e2 = 2 * err;
                 if (e2 >= dy) { err += dy; x1 += sx; }
                 if (e2 <= dx) { err += dx; y1 += sy; }
+            }
+        }
+
+        private void WuLine(int x1, int y1, int x2, int y2, Color color)
+        {
+            float frac(float x) => (float)(x - Math.Floor(x));
+
+            // Change x,y based on quarter
+            bool steep = Math.Abs(y2 - y1) > Math.Abs(x2 - x1);
+            if (steep)
+            {
+                (x1, y1) = (y1, x1);
+                (x2, y2) = (y2, x2);
+            }
+            if (x1 > x2)
+            {
+                (x1, x2) = (x2, x1);
+                (y1, y2) = (y2, y1);
+            }
+
+            float dx = x2 - x1;
+            float dy = y2 - y1;
+            float slope = (dx == 0) ? 1 : dy / dx;
+
+            float y = y1;
+            if (steep)
+            {
+                for (int i = x1; i < x2; i++, y += slope)
+                {
+                    DrawPixelWithIntensity((int)y, i, color, (1 - frac(y)));
+                    DrawPixelWithIntensity((int)(y + 1), i, color, frac(y));
+                }
+            }
+            else
+            {
+                for (int i = x1; i < x2; i++, y += slope)
+                {
+                    DrawPixelWithIntensity(i, (int)y, color, (1 - frac(y)));
+                    DrawPixelWithIntensity(i, (int)(y + 1), color, frac(y));
+                }
+            }
+        }
+
+        private void DrawPixelWithIntensity(int x, int y, Color color, float intensity)
+        {
+            if (x >= 0 && y >= 0 && x < _bitmap.Width && y < _bitmap.Height)
+            {
+                Color existingColor = _bitmap.GetPixel(x, y);
+                Color blendedColor = Color.FromArgb(
+                (int)(intensity * color.A + (1 - intensity) * existingColor.A),
+                (int)(intensity * color.R + (1 - intensity) * existingColor.R),
+                (int)(intensity * color.G + (1 - intensity) * existingColor.G),
+                (int)(intensity * color.B + (1 - intensity) * existingColor.B));
+
+                _bitmap.SetPixel(x, y, blendedColor);
             }
         }
 

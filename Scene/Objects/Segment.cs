@@ -8,6 +8,13 @@
 
         public IConstraint? Constraint { get; set; }
 
+        public bool IsAntialiased {  get; set; }
+
+        internal void ToggleAntialiasing()
+        {
+            IsAntialiased = !IsAntialiased;
+        }
+
         public Segment(Vertex start, Vertex end, Shape? parent = null)
         {
             Start = start;

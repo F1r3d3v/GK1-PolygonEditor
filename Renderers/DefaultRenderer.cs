@@ -82,9 +82,9 @@ namespace GK1_PolygonEditor
             Point cp1 = Camera.WorldToScreen(bezierCurve.ControlPoint1);
             Point cp2 = Camera.WorldToScreen(bezierCurve.ControlPoint2);
             Graphics.DrawLine(pen, start.X, start.Y, cp1.X, cp1.Y);
-            //Graphics.DrawLine(pen, cp1.X, cp1.Y, cp2.X, cp2.Y);
+            Graphics.DrawLine(pen, cp1.X, cp1.Y, cp2.X, cp2.Y);
             Graphics.DrawLine(pen, cp2.X, cp2.Y, end.X, end.Y);
-            //Graphics.DrawLine(pen, end.X, end.Y, start.X, start.Y);
+            Graphics.DrawLine(pen, end.X, end.Y, start.X, start.Y);
             Visit(bezierCurve.ControlPoint1);
             Visit(bezierCurve.ControlPoint2);
             pen.Dispose();

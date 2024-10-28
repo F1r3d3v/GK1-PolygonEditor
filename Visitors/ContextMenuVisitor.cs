@@ -1,4 +1,6 @@
-﻿namespace GK1_PolygonEditor
+﻿using System.Windows.Forms.VisualStyles;
+
+namespace GK1_PolygonEditor
 {
     internal class ContextMenuVisitor(Renderer _renderer) : IVisitor
     {
@@ -36,6 +38,7 @@
             {
                 _contextMenu.Items.Add(new ToolStripMenuItem("Remove constraint", null, (s, e) => { edge.RemoveConstraint(); _renderer.RenderScene(); }));
             }
+            _contextMenu.Items.Add(new ToolStripMenuItem("Toggle antialiasing", null, (s, e) => { edge.ToggleAntialiasing(); _renderer.RenderScene(); }));
             _contextMenu.Show(Cursor.Position);
         }
 
@@ -43,6 +46,7 @@
         {
             _contextMenu = new ContextMenuStrip();
             _contextMenu.Items.Add(new ToolStripMenuItem("Change to edge", null, (s, e) => { bezierCurve.ChangeToEdge(); _renderer.RenderScene(); }));
+            _contextMenu.Items.Add(new ToolStripMenuItem("Toggle antialiasing", null, (s, e) => { bezierCurve.ToggleAntialiasing(); _renderer.RenderScene(); }));
             _contextMenu.Show(Cursor.Position);
         }
 

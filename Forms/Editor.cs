@@ -27,6 +27,7 @@ namespace GK1_PolygonEditor
             InitializeComponent();
 
             _scene = new Scene();
+            _scene.ClearColor = Color.White;
             _unsafeBitmap = new UnsafeBitmap(c_Canvas.Width, c_Canvas.Height);
             _camera = new Camera(_unsafeBitmap.Width, _unsafeBitmap.Height);
             _renderer = new Renderer(_scene, c_Canvas, _unsafeBitmap, _camera);
@@ -35,6 +36,8 @@ namespace GK1_PolygonEditor
             Utils.AddRadioCheckedBinding(rb_Library, _renderer, "RendererEnum", RendererEnum.Library);
             Utils.AddRadioCheckedBinding(rb_Bresenham, _renderer, "RendererEnum", RendererEnum.Bresenham);
 
+
+            // Hardcoding shape for presentation
             var verts = new Vertex[]
             {
                 new Vertex(160, -115),
@@ -49,14 +52,18 @@ namespace GK1_PolygonEditor
                 new Edge(verts[0], verts[1]),
                 new Edge(verts[1], verts[2]),
                 new Edge(verts[2], verts[3]),
-                new Edge(verts[4], verts[0]),
                 new BezierCurve(verts[3], verts[4]),
+                new Edge(verts[4], verts[0]),
             };
+
+            (segments[3] as BezierCurve)!.ControlPoint1.FirstSegment = segments[2];
+            (segments[3] as BezierCurve)!.ControlPoint2.SecondSegment = segments[4];
 
             (segments[0] as Edge)!.SetVertical();
             (segments[1] as Edge)!.SetFixedLength(150);
-            (segments[3] as Edge)!.SetHorizontal();
+            (segments[4] as Edge)!.SetHorizontal();
             verts[3].SetG1Continuity();
+
             _scene.AddShape(new Shape(verts, segments));
             _scene.Shapes.ForEach((x) => x.IsClosed = true);
 

@@ -62,7 +62,7 @@ namespace GK1_PolygonEditor
         public List<Vertex> ComputePoints()
         {
             _vertices = new List<Vertex>();
-            int points = Math.Max((int)Start.DistanceTo(End) / 8, 25);
+            int points = Math.Max((int)Start.DistanceTo(End) / 8, 30);
             _step = 1.0 / (points - 1);
             Vertex A0 = Start;
             Vertex A1 = 3 * (ControlPoint1 - Start);
