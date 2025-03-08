@@ -1,8 +1,8 @@
-# GK1-PolygonEditor
+# PolygonEditor
 
 ## Project Description
 
-GK1-PolygonEditor is a Windows Forms application designed for creating and manipulating 2D polygon shapes. It offers a user-friendly interface to draw polygons, apply geometric constraints (horizontal, vertical, fixed length), create Bezier curves, and manage vertex continuity (G0, G1, C1). The editor supports two rendering modes: the standard .NET library rendering and a custom Bresenham's line algorithm implementation with Xiaolin Wu's antialiasing.
+PolygonEditor is a Windows Forms application designed for creating and manipulating 2D polygon shapes. It offers a user-friendly interface to draw polygons, apply geometric constraints (horizontal, vertical, fixed length), create Bezier curves, and manage vertex continuity (G0, G1, C1). The editor supports two rendering modes: the standard .NET library rendering and a custom Bresenham's line algorithm implementation with Xiaolin Wu's antialiasing.
 
 ## Table of Contents
 
@@ -30,8 +30,8 @@ GK1-PolygonEditor is a Windows Forms application designed for creating and manip
 2.  **Clone the Repository:**
 
     ```bash
-    git clone https://github.com/F1r3d3v/GK1-PolygonEditor.git
-    cd GK1-PolygonEditor
+    git clone https://github.com/F1r3d3v/PolygonEditor.git
+    cd PolygonEditor
     ```
 
 3.  **Build the Project:**
@@ -113,7 +113,7 @@ GK1-PolygonEditor is a Windows Forms application designed for creating and manip
 
 ## Constraint Mechanism
 
-The GK1-PolygonEditor provides a robust constraint system that allows users to define and maintain geometric relationships between parts of a polygon.  This system ensures that when you modify one part of a shape (e.g., move a vertex), other parts adjust automatically to preserve the specified constraints.
+The PolygonEditor provides a robust constraint system that allows users to define and maintain geometric relationships between parts of a polygon.  This system ensures that when you modify one part of a shape (e.g., move a vertex), other parts adjust automatically to preserve the specified constraints.
 
 ### Core Concepts
 
